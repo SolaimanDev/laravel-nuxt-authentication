@@ -1,14 +1,15 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
     public function __construct() {
-        $this->middleware('auth:api', ['except' => ['login']]);
+        $this->middleware('auth:api', ['except' => ['login','register']]);
     }
 
     /**
@@ -29,12 +30,31 @@ class AuthController extends Controller
         return response()->json(['error' => 'Unauthorized'], 401);
     }
 
+    public function register(Request $request)
+    {
+       $validation=$request->validate([
+        'name' => 'required',
+        'email' => 'required|unique:users|max:255',
+        'password' => 'required',
+    ]);
+       $data=$request->all();
+       $data['password']=bcrypt($request->password);
+       $user=User::create($data);
+
+       if ($token = auth('api')->login($user)) {
+        return $this->respondWithToken($token);
+    }
+
+    return response()->json(['error' => 'Unauthorized'], 401);
+
+    }
+
     /**
      * Get the authenticated User
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function profile()
+    public function profile(Request $request)
     {
         return response()->json($this->guard('api')->user());
     }
